@@ -5,10 +5,7 @@ import com.camillepradel.movierecommender.model.Movie;
 import com.camillepradel.movierecommender.model.Rating;
 import com.mongodb.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class MongodbDatabase extends AbstractDatabase {
     DB db = null;
@@ -91,14 +88,32 @@ public class MongodbDatabase extends AbstractDatabase {
 
     @Override
     public List<Movie> getMoviesRatedByUser (int userId) {
-        // TODO: write query to retrieve all movies rated by user with id userId
         List<Movie> movies = new LinkedList<Movie>();
-        Genre genre0 = new Genre(0, "genre0");
-        Genre genre1 = new Genre(1, "genre1");
-        Genre genre2 = new Genre(2, "genre2");
-        movies.add(new Movie(0, "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})));
-        movies.add(new Movie(3, "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})));
-        return movies;
+        if (this.db != null) {
+            try {
+                DBCollection ratingsCollection = this.db.getCollection("ratings");
+                DBCollection moviesCollection = this.db.getCollection("movies");
+
+                //Récupère les infos de userId
+                BasicDBObject userFilter = new BasicDBObject();
+                userFilter.put("user_id", userId);
+                DBCursor cursor = ratingsCollection.find(userFilter);
+
+                while (cursor.hasNext()) {
+                    DBObject currentRating = cursor.next();
+                    //Récupère les movies de userId
+                    BasicDBObject ratingMoviesFilter = new BasicDBObject();
+                    ratingMoviesFilter.put("id", Integer.parseInt(currentRating.get("mov_id").toString()));
+                    DBObject currentMovie = moviesCollection.findOne(ratingMoviesFilter);
+                    movies.add(this.generateMovie(currentMovie));
+                }
+                return movies;
+            } catch (Exception e) {
+                System.out.println("Erreur getMoviesRatedByUser(" + userId + ")");
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     @Override
