@@ -118,13 +118,32 @@ public class MongodbDatabase extends AbstractDatabase {
 
     @Override
     public List<Rating> getRatingsFromUser (int userId) {
-        // TODO: write query to retrieve all ratings from user with id userId
         List<Rating> ratings = new LinkedList<Rating>();
-        Genre genre0 = new Genre(0, "genre0");
-        Genre genre1 = new Genre(1, "genre1");
-        ratings.add(new Rating(new Movie(0, "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})), userId, 3));
-        ratings.add(new Rating(new Movie(2, "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
-        return ratings;
+        if (this.db != null) {
+            try {
+                DBCollection ratingsCollection = this.db.getCollection("ratings");
+                DBCollection moviesCollection = this.db.getCollection("movies");
+
+                //Récupère les infos de userId
+                BasicDBObject userFilter = new BasicDBObject();
+                userFilter.put("user_id", userId);
+                DBCursor cursor = ratingsCollection.find(userFilter);
+
+                while (cursor.hasNext()) {
+                    DBObject currentRating = cursor.next();
+                    //Récupère les movies de userId
+                    BasicDBObject ratingMoviesFilter = new BasicDBObject();
+                    ratingMoviesFilter.put("id", Integer.parseInt(currentRating.get("mov_id").toString()));
+                    DBObject currentMovie = moviesCollection.findOne(ratingMoviesFilter);
+                    ratings.add(new Rating(this.generateMovie(currentMovie), userId, Integer.parseInt(currentRating.get("rating").toString())));
+                }
+                return ratings;
+            } catch (Exception e) {
+                System.out.println("Erreur getRatingsFromUser(" + userId + ")");
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     @Override
