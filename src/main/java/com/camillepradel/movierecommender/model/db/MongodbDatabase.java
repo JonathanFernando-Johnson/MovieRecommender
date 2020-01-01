@@ -148,9 +148,46 @@ public class MongodbDatabase extends AbstractDatabase {
 
     @Override
     public void addOrUpdateRating (Rating rating) {
-        // TODO: add query which
-        //         - add rating between specified user and movie if it doesn't exist
-        //         - update it if it does exist
+
+        if (this.db != null) {
+            try {
+                DBCollection ratingsCollection = this.db.getCollection("ratings");
+
+                //Récupère le rating pour le userId rating.getUserId() sur le film rating.getMovieId()
+                BasicDBObject ratingFilter = new BasicDBObject();
+                ratingFilter.put("user_id", rating.getUserId());
+                ratingFilter.put("mov_id", rating.getMovieId());
+                DBObject currentRating = ratingsCollection.findOne(ratingFilter);
+
+                //Pour le timestamp
+                Date date = new Date();
+                long time = date.getTime();
+
+                if (currentRating == null) {//si le rating existe pas
+                    //on crée le rating
+                    BasicDBObject createRating = new BasicDBObject();
+                    createRating.append("user_id", rating.getUserId());
+                    createRating.append("mov_id", rating.getMovieId());
+                    createRating.append("rating", rating.getScore());
+                    createRating.append("timestamp", time);
+
+                    ratingsCollection.insert(createRating);
+                } else {//si le rating existe
+                    //on fait l'update
+                    BasicDBObject updateRating = new BasicDBObject();
+                    updateRating.append("rating", rating.getScore());
+                    updateRating.append("timestamp", time);
+
+                    BasicDBObject setQuery = new BasicDBObject();
+                    setQuery.append("$set", updateRating);
+
+                    ratingsCollection.update(ratingFilter, setQuery);
+                }
+            } catch (Exception e) {
+                System.out.println("Erreur addOrUpdateRating : movieId = " + rating.getMovieId() + "  userId = " + rating.getUserId());
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
