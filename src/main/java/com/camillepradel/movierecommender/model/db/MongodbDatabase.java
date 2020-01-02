@@ -192,26 +192,98 @@ public class MongodbDatabase extends AbstractDatabase {
 
     @Override
     public List<Rating> processRecommendationsForUser (int userId, int processingMode) {
-        // TODO: process recommendations for specified user exploiting other users ratings
-        //       use different methods depending on processingMode parameter
-        Genre genre0 = new Genre(0, "genre0");
-        Genre genre1 = new Genre(1, "genre1");
-        Genre genre2 = new Genre(2, "genre2");
         List<Rating> recommendations = new LinkedList<Rating>();
-        String titlePrefix;
-        if (processingMode == 0) {
-            titlePrefix = "0_";
-        } else if (processingMode == 1) {
-            titlePrefix = "1_";
-        } else if (processingMode == 2) {
-            titlePrefix = "2_";
-        } else {
-            titlePrefix = "default_";
+        List<Rating> userRatedMovieList = this.getRatingsFromUser(userId);
+
+        /**
+         * SUPPRESSION DE L'ENTETE CSV DE LA BDD
+         * Pas nécessaire si on traite la bdd préalablement*/
+        if (this.db != null) {
+            try {
+                DBCollection ratingsCollection = this.db.getCollection("ratings");
+                BasicDBObject deleteCsvHeaderQuery = new BasicDBObject();
+                deleteCsvHeaderQuery.put("user_id", "user_id");
+                ratingsCollection.remove(deleteCsvHeaderQuery);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-        recommendations.add(new Rating(new Movie(0, titlePrefix + "Titre 0", Arrays.asList(new Genre[]{genre0, genre1})), userId, 5));
-        recommendations.add(new Rating(new Movie(1, titlePrefix + "Titre 1", Arrays.asList(new Genre[]{genre0, genre2})), userId, 5));
-        recommendations.add(new Rating(new Movie(2, titlePrefix + "Titre 2", Arrays.asList(new Genre[]{genre1})), userId, 4));
-        recommendations.add(new Rating(new Movie(3, titlePrefix + "Titre 3", Arrays.asList(new Genre[]{genre0, genre1, genre2})), userId, 3));
+
+        switch (processingMode) {
+            case 0://utilisateur le plus proche
+                List<Rating> closestUserRatedMovieList = this.getRatingsFromUser(this.getClosestUserId(userId, userRatedMovieList, 1).get(0));
+                for (Rating currentRecommandation : closestUserRatedMovieList) {
+                    if (!userRatedMovieList.contains(currentRecommandation)) {
+                        recommendations.add(currentRecommandation);
+                    }
+                }
+                break;
+
+            case 1:// 5 utilisateurs les plus proche
+                break;
+
+            case 2://valeur des scores
+                break;
+        }
+
         return recommendations;
+    }
+
+    public List<Integer> getClosestUserId (int originUserId, List<Rating> originUserRatedMovieList, int nbClosestUser) {
+        List<Integer> closestUserFoundList = new ArrayList<Integer>();
+
+        List<Integer> originUserRatedMovieIdList = new ArrayList<Integer>();
+        for (Rating movie : originUserRatedMovieList) {
+            originUserRatedMovieIdList.add(movie.getMovieId());
+        }
+
+        //Hashmap<userId,nbMovieCommun> : nombre de movies en commun avec originUserId évalués par chaque user
+        HashMap<Integer, Integer> movieEnCommun = new HashMap<Integer, Integer>();
+
+        if (this.db != null) {
+            try {
+                DBCollection ratingsCollection = this.db.getCollection("ratings");
+                DBCursor cursor = ratingsCollection.find();
+                while (cursor.hasNext()) {
+                    DBObject rating = cursor.next();
+                    //si le film est rated chez originUserId
+                    if (originUserRatedMovieIdList.contains(Integer.parseInt(rating.get("mov_id").toString()))) {
+                        //Id du ser du rating testé
+                        int testedRatingUserId = Integer.parseInt(rating.get("user_id").toString());
+
+                        if (testedRatingUserId != originUserId && movieEnCommun.keySet().contains(testedRatingUserId)) {
+                            //si le user est deja enregistré on incrémente le nombre de movie en commun
+                            int newNbCommonMovie = movieEnCommun.get(testedRatingUserId) + 1;
+                            movieEnCommun.put(testedRatingUserId, newNbCommonMovie);
+                        } else {//sinon on l'ajoute
+                            movieEnCommun.put(testedRatingUserId, 1);
+                        }
+                    }
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Erreur getClosestUserId() lors de la construction du Hashmap<userId,nbMovieCommun> movieEnCommun problème de parseInt");
+                e.printStackTrace();
+            } catch (Exception e) {
+                System.out.println("Erreur getClosestUserId() lors de la construction du Hashmap<userId,nbMovieCommun> movieEnCommun");
+                e.printStackTrace();
+            }
+        }
+
+        int i = 0;
+        while (i < nbClosestUser) {
+            i++;
+            Map.Entry<Integer, Integer> maxEntry = null;
+
+            for (Map.Entry<Integer, Integer> entry : movieEnCommun.entrySet()) {
+                if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0) {
+                    maxEntry = entry;
+                }
+            }
+
+            closestUserFoundList.add(maxEntry.getKey());
+            movieEnCommun.remove(maxEntry.getKey());
+        }
+
+        return closestUserFoundList;
     }
 }
