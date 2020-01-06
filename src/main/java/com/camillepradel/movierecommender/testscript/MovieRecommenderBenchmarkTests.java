@@ -26,7 +26,7 @@ public class MovieRecommenderBenchmarkTests {
         testSurUrl("http://localhost:8080/MovieRecommender/recommendations?processing_mode=2&user_id=");
 
         long finTestBenchmark = System.nanoTime();
-        double tempsTestBenchmark = (double) (finTestBenchmark - debutTestBenchmark) / 1000000000.;
+        double tempsTestBenchmark = (double) (finTestBenchmark - debutTestBenchmark) / 1000000000;
         resultats.add("Durée globale du benchmark : " + tempsTestBenchmark);
 
         try {
@@ -51,10 +51,10 @@ public class MovieRecommenderBenchmarkTests {
         userIdsToTest.add(1);// Massive data
         userIdsToTest.add(63);//Low data
 
-        for (int nbIter = 1; nbIter < 10001; nbIter = nbIter * 10) {
+        for (int nbIter = 1; nbIter < 1001; nbIter = nbIter * 10) {
             long debutTempsThread = System.nanoTime();
 
-            for (int i = 1; i < nbIter; i++) {
+            for (int i = 0; i < nbIter; i++) {
                 resultats.add("\tItération n° " + i);
                 long debutTempsIteration = System.nanoTime();
                 for (Integer currentUserId : userIdsToTest) {
@@ -86,19 +86,19 @@ public class MovieRecommenderBenchmarkTests {
                     }
 
                     long finTempsUtilisateur = System.nanoTime();
-                    double tempsUtilisateur = (double) (finTempsUtilisateur - debutTempsUtilisateur) / 1000000000.;
+                    double tempsUtilisateur = (double) (finTempsUtilisateur - debutTempsUtilisateur) / 1000000000;
                     resultats.add("\t\t\tTemps passé pour l'utilisateur en cours : " + tempsUtilisateur);
                     resultats.add("\t\tFin test pour utilisateur " + currentUserId);
                 }
 
                 long finTempsIteration = System.nanoTime();
-                double tempsIteration = (double) (finTempsIteration - debutTempsIteration) / 1000000000.;
+                double tempsIteration = (double) (finTempsIteration - debutTempsIteration) / 1000000000;
                 resultats.add("\tTemps passé pour l'itération en cours : " + tempsIteration);
                 resultats.add("\tFin itération " + i + "\n");
             }
 
             long finTempsThread = System.nanoTime();
-            double tempsThread = (double) (finTempsThread - debutTempsThread) / 1000000000.;
+            double tempsThread = (double) (finTempsThread - debutTempsThread) / 1000000000;
             resultats.add("\nTemps pour effectuer " + nbIter + " requêtes sur un thread: " + tempsThread + "s\n");
         }
         resultats.add("Fin test " + urlStart + "\n");
